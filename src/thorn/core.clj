@@ -185,8 +185,18 @@
   (let [[selector & children] content]
     (vec (concat (tag->clj selector) (map tag->clj children)))))
 
+(defn maybe-kw [selector]
+  (if (re-find #"[\(\[]" selector)
+    selector
+    (keyword selector)))
+
 (defmethod tag->clj :selector [{:keys [content]}]
-  (selector-split (first content)))
+  (def content content)
+  [(->> content
+        first
+        selector-split
+        first
+        maybe-kw)])
 
 (defmethod tag->clj :declaration [{:keys [content]}]
   (let [[property value] (map tag->clj content)]
@@ -253,18 +263,18 @@
                ~'[garden.def])))
 
 (defn scss->clj [filename namespace-name]
-  (let [spec (ns-spec (symbol namespace-name))
+  (let [#_#_spec (ns-spec (symbol namespace-name))
         data (-> (scss->edn filename)
                  remove-comments)
         call-defs (call-defs data)
         sym-defs (map tag->clj (sym-defs data))
         styles (map tag->clj (remove-assigns data))
-        styles-name (-> (name namespace-name)
+        styles-name (-> "styles" #_(name namespace-name)
                         (string/split  #"\.")
                         last
                         symbol)
         styles-spec (concat `(garden.def/defstyles ~styles-name) styles)]
-    `(~spec
+    `(#_~spec
       ~@call-defs
       ~@sym-defs
       ~styles-spec)))

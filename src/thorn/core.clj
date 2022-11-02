@@ -183,7 +183,7 @@
 
 (defmethod tag->clj :rule [{:keys [content]}]
   (let [[selector & children] content]
-    (vec (concat (tag->clj selector) (map tag->clj children)))))
+    (vec (concat (tag->clj selector) (distinct (map tag->clj children))))))
 
 (defn maybe-kw [selector]
   (if (re-find #"[\(\[]|::" selector)

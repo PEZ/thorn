@@ -186,7 +186,7 @@
     (vec (concat (tag->clj selector) (map tag->clj children)))))
 
 (defn maybe-kw [selector]
-  (if (re-find #"[\(\[]" selector)
+  (if (re-find #"[\(\[]|::" selector)
     selector
     (keyword selector)))
 

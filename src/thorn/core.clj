@@ -73,6 +73,10 @@
 (def filter-declarations (filter-tag declaration?))
 (def filter-calls (filter-tag call?))
 
+(def assign? (tag= :assign))
+(def remove-assigns (remove-tag assign?))
+(def filter-assigns (filter-tag assign?))
+
 (defn property->string [{:keys [content]}]
   (first content))
 
@@ -124,6 +128,12 @@
       (str n nunits (when-not (string/blank? dunits)
                       (str "/" dunits))))))
 
+(defmethod tag->str :number [{:keys [content]}]
+  (first content))
+
+(defmethod tag->str :operation [{:keys [content] :as op-data}]
+  (def op-data op-data)
+  (first content))
 
 ;;----------------------------------------------------------------------
 ;; CSS Emitter
@@ -161,6 +171,13 @@
     (str (tag->clj lhs)
          (operator->string operator)
          (tag->clj rhs))))
+
+(defmethod tag->clj :assign [{:keys [content] :as node-data}]
+  (def node-data node-data)
+  (let [[variable-name value] content]
+    (list 'def
+          (symbol (first (:content variable-name)))
+          (tag->clj value))))
 
 ;; Rules
 
@@ -226,6 +243,9 @@
      `(garden.def/defcssfn ~sym))
    (distinct-calls data)))
 
+(defn sym-defs [data]
+  (filter-assigns data))
+
 (defn ns-spec [ns-name]
   `(~'ns ~ns-name
      (:require ~'[garden.stylesheet]
@@ -234,14 +254,21 @@
 
 (defn scss->clj [filename namespace-name]
   (let [spec (ns-spec (symbol namespace-name))
-        data (remove-comments (scss->edn filename))
-        defs (call-defs data)
-        styles (map tag->clj data)
+        data (-> (scss->edn filename)
+                 remove-comments)
+        call-defs (call-defs data)
+        sym-defs (map tag->clj (sym-defs data))
+        styles (map tag->clj (remove-assigns data))
         styles-name (-> (name namespace-name)
                         (string/split  #"\.")
                         last
                         symbol)
         styles-spec (concat `(garden.def/defstyles ~styles-name) styles)]
     `(~spec
-      ~@defs
+      ~@call-defs
+      ~@sym-defs
       ~styles-spec)))
+
+(comment 
+  (scss->clj "resources/foo.scss" "foo.styles")
+  )

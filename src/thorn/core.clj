@@ -182,11 +182,17 @@
 ;; Rules
 
 (defmethod tag->clj :rule [{:keys [content]}]
-  (let [[selector & children] content]
-    (vec (concat (tag->clj selector) (distinct (map tag->clj children))))))
+  (let [[selector & children] content
+        emitted-children (distinct (map tag->clj children))
+        emitted-maps (filter map? emitted-children)
+        emitted-vectors (filter vector? emitted-children)
+        anything-else (remove (some-fn map? vector?) emitted-children)]
+    (when (seq anything-else)
+      (throw (Exception. "BOOM")))
+    (vec (concat (tag->clj selector) (filterv some? (into emitted-vectors [(reduce merge emitted-maps)]))))))
 
 (defn maybe-kw [selector]
-  (if (re-find #"[\(\[]|::" selector)
+  (if (re-find #"[\(\[]" selector)
     selector
     (keyword selector)))
 
